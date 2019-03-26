@@ -28,6 +28,6 @@ Firstly, this method is slow. The Cobalt Strike staging payload (roughly 800 byt
 Secondly, due to XLM data type constraints (read our blog for details), this method only targets 32 bit installs of Excel.exe - which fortunately is the vast majority of installations. Note that x86 installs on x64 systems are fine. This also means that you should execute this method from a 32 bit PowerShell host or beacon.
 
 ## Authors
-Stan Hegt (@StanHacked)
+Stan Hegt (@StanHacked) / Outflank
 
 Special thanks to Philip Tsukerman (@PhilipTsukerman) for pointing out to me that Excel 4.0 macros are exposed via DCOM.
